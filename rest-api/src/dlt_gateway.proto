@@ -1,0 +1,208 @@
+// Copyright 2022-2023 ETSI TeraFlowSDN - TFS OSG (https://tfs.etsi.org/)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package dlt;
+import "google/protobuf/empty.proto";
+
+service DltGatewayService {
+  // Registrering user, returns the contennt of the the .id file for accessing to the blockchain
+  rpc RegisterUser (NewUser) returns (Response) {}
+  rpc RegisterUserEquipment (NewUser) returns (Response) {}
+
+  //MarketPlace
+  rpc CreateProvider (Request) returns (Response) {}
+  rpc UpdateProvider (Provider) returns (Response) {}
+  rpc GetProvider (Request) returns (Response) {}
+  rpc ListProvider (Request) returns (Response) {}
+  rpc DeleteProvider (Request) returns (Response) {}
+
+  rpc CreateService (Request) returns (Response) {}
+  rpc GetService (Request) returns (Response) {}
+  rpc ListService (Request) returns (Response) {}
+  rpc UpdateService (Service) returns (Response) {}
+  rpc DeleteService (Request) returns (Response) {}
+
+  //Search Component
+
+  rpc CreateSearch (Request) returns (Response) {}
+  rpc GetSearch (Request) returns (Response) {}
+
+  //SLA registry
+  rpc InitSLA(SLA) returns (Response){}
+  rpc GetSLA(Request) returns  (Response){}
+  rpc GetSLAByConsumerId(Request) returns (Response){}
+  rpc SlaSign(Request) returns  (Response){}
+  //Event Subscriber
+  rpc SubscribeToSLAInit(google.protobuf.Empty) returns (stream DltRecordEvent) {}
+  rpc SubscribeToSLASigning(google.protobuf.Empty) returns (stream DltRecordEvent) {}
+  //SSI
+
+  rpc CreateDID (Request) returns (Response) {}
+  // Register the DID on the blockchain
+  rpc RegisterDID (DID) returns (Response) {}
+
+  // Request to the wallet to sign a message
+  rpc SignMessage(SignMessageReq) returns (SignMessageResp) {}
+  // Request to the wallet to verify a message
+  rpc VerifyMessage(VerifyMessageReq) returns (VerificationResult) {}
+  // Return a list of DIDs saved in the wallet
+  rpc ListDIDs(google.protobuf.Empty) returns (Response) {}
+  // Return a list of credentials saved in the wallet
+  rpc ListCredentials(google.protobuf.Empty) returns (Response) {}
+
+  // -- Issuer --
+  // Request to the issuer wallet to issue a credential
+  rpc CreateCredential (CredentialParam) returns (Credential) {}
+  // Request to the issuer wallet to revoke a credential
+  rpc RevokeCredential (Request) returns (Response) {}
+  //-- Holder --
+  // Request to the holder wallet to request a VC from an issuer
+  rpc RequestCredential (CredentialRequest) returns (Credential) {}
+  // Request to the holder wallet to generate a VP
+  rpc CreatePresentation (PresentationParam) returns (Response) {}
+  // Request to the holder wallet to request authorization from a verifier
+  rpc RequestAuthorization (AuthorizationRequest) returns (VerificationResult) {}
+  // -- Verifier --
+  // Request to the verififer wallet for a nonce used for generating VP
+  rpc GetNonce (Request) returns (Response) {}
+  // Request to the verifier wallet to verify the VP over a VC
+  rpc VerifyCredential (Request) returns (VerificationResult) {}
+}
+
+
+// General data structure for request/response messages where the true payload is
+// serialized json object in `value` so that the wallet interface is orthogonal
+// to any changes in the smart contract APIs
+message Request {
+  string value = 1;
+}
+
+message Response {
+  string value = 1;
+  string error = 2;
+}
+
+// For smart contract events
+message DltRecordEvent {
+  string name  = 1;
+  string payload = 2;
+}
+
+//============  SSI data types ============
+
+message NewUser {
+  string user = 1;
+  string role = 2;
+}
+
+// DID registered to the blockchain DID registry
+message DID {
+  string did = 1;
+  string document = 2;
+}
+
+// Request to ask the wallet to sign a message using a specific verification
+// method defined in DID document
+message SignMessageReq {
+  string did = 1;   // if empty use the default DID in wallet
+  string vmId = 2;
+  string payload = 3;
+}
+
+message SignMessageResp {
+  string vmId = 1;
+  string signature = 2;
+  string error = 3;
+}
+
+// Request to ask the wallet to verify a message using a specific verification
+// method defined in DID document
+message VerifyMessageReq {
+  string did = 1;
+  string vmId = 2;
+  string payload = 3;
+  string signature = 4;
+}
+
+//
+message VerificationResult {
+  bool result = 1;
+  string error = 2;
+}
+
+
+// Request to acquire a credential from issuer
+message CredentialParam {
+  string holderDID = 1;  // if empty use the default DID in wallet
+  string claims = 2; //json format
+  string vmId = 3;
+  string signature = 4;  // the wallet will sign the request
+}
+
+message CredentialRequest {
+  string issuerAddress = 1;
+  CredentialParam credParam = 2;
+}
+
+// Issued credential
+message Credential {
+  string credential = 1;
+  string error = 2;
+}
+
+message AuthorizationParam {
+  string holderDID = 1;     // if empty use the default DID in wallet
+  string vcId = 2;
+}
+
+message AuthorizationRequest {
+  string verifierAddress = 1;
+  AuthorizationParam authParam = 2;
+}
+
+// Request to create a VP
+message PresentationParam {
+  string credential = 1;
+  string nonce = 2;
+}
+
+
+
+// ============== Marketplace =============
+
+message Service {
+  string serviceId = 1;
+  string json = 2;
+}
+
+message NewService {
+  string providerId = 1;
+  string json = 2;
+}
+
+message Provider {
+  string providerId = 1;
+  string json = 2;
+}
+
+message SLA {
+  string id = 1;
+  string value = 2;
+  string providerId = 3;
+  string consumerId = 4;
+  string providerSig = 5;
+  string consumerSig = 6;
+}
+
