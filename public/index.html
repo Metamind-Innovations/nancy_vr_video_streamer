@@ -205,6 +205,53 @@
     </div>
 
     <script>
+        // rest calls requestCredentials({
+            //     "credParam": {
+            //         "claims": "laboris in",
+            //         "holderDID": "already provided by the UE",
+            //         "signature": "?",
+            //         "vmId": "?"
+            //     },
+            //     "issuerAddress": "defined by the pilot"
+            // })
+        fetch('/requestCredentials', {
+            method: 'POST',
+            body: JSON.stringify({
+                "credParam": {
+                    "claims": "laboris in",
+                    "holderDID": "already provided by the UE",
+                    "signature": "?",
+                    "vmId": "?"
+                },
+                "issuerAddress": "defined by the pilot"
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);//get credential
+        })
+        .catch(error => {
+            console.error('Error requesting credentials:', error);
+        });
+
+        // rest calls getnoce, etc new wrapper on wallet
+        // rest calls requestAuth
+        // rest calls signmessage
+        fetch('signMessage', {
+            method: 'POST',
+            body: JSON.stringify({
+                "message": "Hello, world!"
+            })
+        })
+        .then(response => response.json)
+        .then(data => {
+            console.log(data);//get signature
+        })
+        .catch(error => {
+            console.error('Error signing message:', error);
+        });
+        
+
         const videoPlayer = document.getElementById('videoPlayer');
         const resolutionElement = document.getElementById('resolution');
         const bitrateElement = document.getElementById('bitrate');
