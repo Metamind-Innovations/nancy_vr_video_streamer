@@ -1,15 +1,6 @@
-version: '3'
+version: '3.8'
 
 services:
-  video-server:
-    image: test
-    container_name: video-server
-    ports:
-      - "8080:80"
-    volumes:
-      - ./videos:/usr/share/nginx/videos
-      - ./logs:/var/log/nginx
-    restart: unless-stopped
   nancy-grpc-client-side:
     build:
       context: ..
@@ -25,6 +16,8 @@ services:
       - UVICORN_HOST=${UVICORN_HOST:-0.0.0.0}
       - UVICORN_PORT=${UVICORN_PORT:-8000}
       - API_TITLE=${API_TITLE:-DLT Gateway REST API client-side}
+    networks:
+      - nancy-network
   nancy-grpc-server-side:
     build:
       context: ..
@@ -40,3 +33,9 @@ services:
       - UVICORN_HOST=${UVICORN_HOST:-0.0.0.0}
       - UVICORN_PORT=${UVICORN_PORT:-8000}
       - API_TITLE=${API_TITLE:-DLT Gateway REST API server-side}
+    networks:
+      - nancy-network
+
+networks:
+  nancy-network:
+    driver: bridge 

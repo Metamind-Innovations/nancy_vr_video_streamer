@@ -10,7 +10,6 @@ from routes import sla_router, verification_router, search_router, did_router
 from dotenv import load_dotenv
 import uvicorn
 
-
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # Initialize gRPC client
@@ -26,8 +25,8 @@ async def lifespan(app: FastAPI):
     if grpc_client:
         grpc_client.channel.close()
 
-app = FastAPI(title="DLT Gateway REST API", lifespan=lifespan)
-
+api_title = os.getenv("API_TITLE", "DLT Gateway REST API")
+app = FastAPI(title=api_title, lifespan=lifespan)
 # Include routers
 app.include_router(sla_router)
 app.include_router(verification_router)

@@ -17,7 +17,7 @@ package dlt;
 import "google/protobuf/empty.proto";
 
 service DltGatewayService {
-  // Registrering user, returns the contennt of the the .id file for accessing to the blockchain
+  // Registering user, returns the content of the the .id file for accessing to the blockchain
   rpc RegisterUser (NewUser) returns (Response) {}
   rpc RegisterUserEquipment (NewUser) returns (Response) {}
 
@@ -59,8 +59,12 @@ service DltGatewayService {
   rpc VerifyMessage(VerifyMessageReq) returns (VerificationResult) {}
   // Return a list of DIDs saved in the wallet
   rpc ListDIDs(google.protobuf.Empty) returns (Response) {}
-  // Return a list of credentials saved in the wallet
+  // Return a list of credentials overviews that are saved in the wallet
   rpc ListCredentials(google.protobuf.Empty) returns (Response) {}
+  // Look up the DID Document in the registry
+  rpc LookupDID(Request) returns (Response) {}
+  // Return the full credential in the wallet
+  rpc ShowCredential(Request) returns (Response) {}
 
   // -- Issuer --
   // Request to the issuer wallet to issue a credential
@@ -75,10 +79,14 @@ service DltGatewayService {
   // Request to the holder wallet to request authorization from a verifier
   rpc RequestAuthorization (AuthorizationRequest) returns (VerificationResult) {}
   // -- Verifier --
-  // Request to the verififer wallet for a nonce used for generating VP
+  // Request to the verifier wallet for a nonce used for generating VP
   rpc GetNonce (Request) returns (Response) {}
   // Request to the verifier wallet to verify the VP over a VC
   rpc VerifyCredential (Request) returns (VerificationResult) {}
+  // Return the VP verification results that matches the MongoDB filter string specified in request
+  rpc ListAuthorizationResults(Request) returns (Response) {}
+  // Return the latest VP verification result matches the MongoDB filter string specified in request
+  rpc FindLatestAuthorizationResult(Request) returns (Response) {}
 }
 
 
@@ -142,13 +150,12 @@ message VerificationResult {
   string error = 2;
 }
 
-
 // Request to acquire a credential from issuer
 message CredentialParam {
   string holderDID = 1;  // if empty use the default DID in wallet
-  string claims = 2; //json format
-  string vmId = 3;
-  string signature = 4;  // the wallet will sign the request
+  string claims = 2;     // json format
+  string vmId = 3;       // if empty use the default verification method (credential) of the related DID
+  string signature = 4;  // leave it empty for the RequestCredential call, the wallet will sign the request automatically and forward the request to the issuer
 }
 
 message CredentialRequest {
@@ -158,7 +165,7 @@ message CredentialRequest {
 
 // Issued credential
 message Credential {
-  string credential = 1;
+  string credential = 1;    // the serialized VC object
   string error = 2;
 }
 

@@ -14,36 +14,6 @@ class DltGatewayClient:
         self.channel = grpc.insecure_channel(f"{host}:{port}")
         self.stub = dlt_gateway_pb2_grpc.DltGatewayServiceStub(self.channel)
 
-    def get_nonce(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Get a nonce from the verifier wallet."""
-        request = dlt_gateway_pb2.Request(value=json.dumps(request_data))
-        response = self.stub.GetNonce(request)
-        return {
-            "value": response.value,
-            "error": response.error
-        }
-
-    def create_presentation(self, credential: Dict[str, Any], nonce: str) -> Dict[str, Any]:
-        """Create a verifiable presentation."""
-        request = dlt_gateway_pb2.PresentationParam(
-            credential=json.dumps(credential),
-            nonce=nonce
-        )
-        response = self.stub.CreatePresentation(request)
-        return {
-            "value": response.value,
-            "error": response.error
-        }
-
-    def verify_credential(self, credential: Dict[str, Any]) -> Dict[str, Any]:
-        """Verify a credential."""
-        request = dlt_gateway_pb2.Request(value=json.dumps(credential))
-        response = self.stub.VerifyCredential(request)
-        return {
-            "result": response.result,
-            "error": response.error
-        }
-
     def create_search(self, search_request: Dict[str, Any]) -> Dict[str, Any]:
         """Create a search request."""
         request = dlt_gateway_pb2.Request(value=json.dumps(search_request))
@@ -104,4 +74,74 @@ class DltGatewayClient:
         return {
             "credential": response.credential,
             "error": response.error
+        }
+
+    def lookup_did(self, did_value: str) -> Dict[str, Any]:
+        """Look up a DID document in the registry."""
+        request = dlt_gateway_pb2.Request(value=did_value)
+        response = self.stub.LookupDID(request)
+        return {
+            "value": response.value,
+            "error": response.error
         } 
+    
+    def show_credential(self, credential_value: str) -> Dict[str, Any]: 
+        """Get a verifiable credential from the wallet."""
+        request = dlt_gateway_pb2.Request(value=credential_value)
+        response = self.stub.ShowCredential(request)
+        return {
+            "value": response.value,
+            "error": response.error
+        }
+    
+    def list_credentials(self) -> Dict[str, Any]:
+        """Get a credential from the wallet."""
+        request = dlt_gateway_pb2.google_dot_protobuf_dot_empty__pb2.Empty()
+        response = self.stub.ListCredentials(request)
+        return {
+            "value": response.value,
+            "error": response.error
+        }
+
+    def request_authorization(self, verifier_address: str, auth_param: Dict[str, Any]) -> Dict[str, Any]:
+        """Request authorization from a verifier."""
+        request = dlt_gateway_pb2.AuthorizationRequest(
+            verifierAddress=verifier_address,
+            authParam=dlt_gateway_pb2.AuthorizationParam(
+                holderDID=auth_param.get("holderDID", ""),
+                vcId=auth_param.get("vcId", "")
+            )
+        )
+        response = self.stub.RequestAuthorization(request)
+        return {
+            "result": response.result,
+            "error": response.error
+        }
+    
+    def sign_message(self, did: str, payload: str, vmId: str) -> Dict[str, Any]:
+        """Sign a message."""
+        request = dlt_gateway_pb2.SignMessageReq(
+            did=did,
+            payload=payload,
+            vmId=vmId
+        )
+        response = self.stub.SignMessage(request)
+        return {
+            "signature": response.signature,
+            "vmId": response.vmId,
+            "error": response.error
+        }
+    
+    def verify_message(self, did: str, payload: str, signature: str, vmId: str) -> Dict[str, Any]:
+        """Verify a message."""
+        request = dlt_gateway_pb2.VerifyMessageReq(
+            did=did,
+            payload=payload,
+            signature=signature,
+            vmId=vmId
+        )
+        response = self.stub.VerifyMessage(request)
+        return {
+            "result": response.result,
+            "error": response.error
+        }
