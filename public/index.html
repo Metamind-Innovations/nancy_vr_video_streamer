@@ -143,6 +143,10 @@
             font-size: 9px;
             color: #666;
         }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -150,55 +154,72 @@
         <div class="nav">
             <h1>Video Streaming Server</h1>
         </div>
-        <div class="video-container">
-            <video id="videoPlayer" controls playsinline>
-                <source src="/videos/sample.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        </div>
-        <div>
-            <label for="videoSelect">Select Video:</label>
-            <select id="videoSelect" onchange="changeVideo()">
-                <option value="/videos/sample.mp4">Loading videos...</option>
-            </select>
+        
+        <!-- Loading indicator - Shown during authentication -->
+        <div id="loadingIndicator" style="text-align: center; padding: 20px; margin-bottom: 20px;">
+            <h2>Authenticating</h2>
+            <p>Please wait while we verify your credentials...</p>
+            <div class="spinner" style="margin: 20px auto; width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: #4CAF50; animation: spin 1s linear infinite;"></div>
         </div>
         
-        <div class="metrics">
-            <h3>Stream Analytics</h3>
-            <div id="streamInfo">
-                <p>Resolution: <span id="resolution">Loading...</span></p>
-                <p>Current Bitrate: <span id="bitrate">Calculating...</span></p>
-                <p>Buffered: <span id="buffered">0%</span></p>
+        <!-- Access Denied Message - Hidden by default -->
+        <div id="accessDeniedMessage" style="display: none; text-align: center; padding: 20px; background-color: #ffebee; border-radius: 5px; margin-bottom: 20px;">
+            <h2>Access Denied</h2>
+            <p>You do not have permission to view this content. Please verify your credentials.</p>
+        </div>
+        
+        <!-- Video Container - Will be shown/hidden based on authorization -->
+        <div id="videoContainer" style="display: none;">
+            <div class="video-container">
+                <video id="videoPlayer" controls playsinline>
+                    <source src="/videos/sample.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div>
+                <label for="videoSelect">Select Video:</label>
+                <select id="videoSelect" onchange="changeVideo()">
+                    <option value="/videos/sample.mp4">Loading videos...</option>
+                </select>
             </div>
             
-            <div class="metrics-grid">
-                <div class="graph-container" id="bitrateGraph">
-                    <div class="graph-title">Bitrate History (kbps)</div>
-                    <div class="graph-y-axis" id="bitrateAxis"></div>
-                    <div class="label">Real-time (last 60 points)</div>
+            <div class="metrics">
+                <h3>Stream Analytics</h3>
+                <div id="streamInfo">
+                    <p>Resolution: <span id="resolution">Loading...</span></p>
+                    <p>Current Bitrate: <span id="bitrate">Calculating...</span></p>
+                    <p>Buffered: <span id="buffered">0%</span></p>
                 </div>
-                <div class="graph-container" id="bufferGraph">
-                    <div class="graph-title">Buffer Level (%)</div>
-                    <div class="graph-y-axis" id="bufferAxis"></div>
-                    <div class="label">Real-time (last 60 points)</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">Video Duration</div>
-                    <div class="stat-value" id="videoDuration">0:00</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">Buffer Events</div>
-                    <div class="stat-value" id="bufferEvents">0</div>
-                </div>
-                <div class="graph-container fps-graph" id="fpsGraph">
-                    <div class="graph-title">Frame Rate (estimated fps)</div>
-                    <div class="graph-y-axis" id="fpsAxis"></div>
-                    <div class="label">Real-time monitoring</div>
-                </div>
-                <div class="graph-container latency-graph" id="latencyGraph">
-                    <div class="graph-title">Playback Latency</div>
-                    <div class="latency-value" id="latencyValue">Calculating...</div>
-                    <div class="label">Time to first frame (ms)</div>
+                
+                <div class="metrics-grid">
+                    <div class="graph-container" id="bitrateGraph">
+                        <div class="graph-title">Bitrate History (kbps)</div>
+                        <div class="graph-y-axis" id="bitrateAxis"></div>
+                        <div class="label">Real-time (last 60 points)</div>
+                    </div>
+                    <div class="graph-container" id="bufferGraph">
+                        <div class="graph-title">Buffer Level (%)</div>
+                        <div class="graph-y-axis" id="bufferAxis"></div>
+                        <div class="label">Real-time (last 60 points)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Video Duration</div>
+                        <div class="stat-value" id="videoDuration">0:00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Buffer Events</div>
+                        <div class="stat-value" id="bufferEvents">0</div>
+                    </div>
+                    <div class="graph-container fps-graph" id="fpsGraph">
+                        <div class="graph-title">Frame Rate (estimated fps)</div>
+                        <div class="graph-y-axis" id="fpsAxis"></div>
+                        <div class="label">Real-time monitoring</div>
+                    </div>
+                    <div class="graph-container latency-graph" id="latencyGraph">
+                        <div class="graph-title">Playback Latency</div>
+                        <div class="latency-value" id="latencyValue">Calculating...</div>
+                        <div class="label">Time to first frame (ms)</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -350,9 +371,31 @@
         .then(data => {
             console.log('use_case_request', data);
             grantService = data;
+            
+            // Hide loading indicator
+            document.getElementById('loadingIndicator').style.display = 'none';
+            
+            // Check if access is granted
+            if (grantService === true) {
+                // Show video player and hide access denied message
+                document.getElementById('videoContainer').style.display = 'block';
+                document.getElementById('accessDeniedMessage').style.display = 'none';
+                console.log('Access granted - Video player enabled');
+            } else {
+                // Hide video player and show access denied message
+                document.getElementById('videoContainer').style.display = 'none';
+                document.getElementById('accessDeniedMessage').style.display = 'block';
+                console.log('Access denied - Video player disabled');
+            }
         })
         .catch(error => {
             console.error('Error in fetch chain:', error);
+            // Hide loading indicator
+            document.getElementById('loadingIndicator').style.display = 'none';
+            // Show error message in case of any fetch failure
+            document.getElementById('videoContainer').style.display = 'none';
+            document.getElementById('accessDeniedMessage').style.display = 'block';
+            document.getElementById('accessDeniedMessage').innerHTML = '<h2>Error</h2><p>Failed to verify credentials: ' + error.message + '</p>';
         });
 
         const videoPlayer = document.getElementById('videoPlayer');
