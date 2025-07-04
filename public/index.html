@@ -205,52 +205,155 @@
     </div>
 
     <script>
-        // rest calls requestCredentials({
-            //     "credParam": {
-            //         "claims": "laboris in",
-            //         "holderDID": "already provided by the UE",
-            //         "signature": "?",
-            //         "vmId": "?"
-            //     },
-            //     "issuerAddress": "defined by the pilot"
-            // })
-        fetch('/requestCredentials', {
-            method: 'POST',
-            body: JSON.stringify({
-                "credParam": {
-                    "claims": "laboris in",
-                    "holderDID": "already provided by the UE",
-                    "signature": "?",
-                    "vmId": "?"
-                },
-                "issuerAddress": "defined by the pilot"
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log(data);//get credential
-        })
-        .catch(error => {
-            console.error('Error requesting credentials:', error);
-        });
+        const did = "did:nancy:wallet-external-test-3EtvHYvkEDF4JAWPpr9LvS";//do change with the local wallet did
+        const issuerAddress = "195.37.154.23:8881";//do change with the local wallet ip:port
+        const verifierAddress = "195.37.154.23:8881";//do change with the local wallet ip:port
+        const claims = "{\"age\": 20}";//do change with the local wallet claims
+        const payload = "vr video service";
 
-        // rest calls getnoce, etc new wrapper on wallet
-        // rest calls requestAuth
-        // rest calls signmessage
-        fetch('signMessage', {
-            method: 'POST',
-            body: JSON.stringify({
-                "message": "Hello, world!"
-            })
+        // const vcId = "did:nancy:vc-d2ad76f6-12b8-4dbe-bc27-ff2b0da80b47";
+        // const vmId = "did:nancy:wallet-external-test-3EtvHYvkEDF4JAWPpr9LvS#key-1";
+        // const signature = "MEUCICrnM487bdwV84dFAOfis+O8RAX/ZQ6VikQvjsdUlwfiAiEAzYFV7IBbxJtjqKzADAL8zzULYPnDJ0ii1iHe8h/yTMc=";
+
+        let vcId;
+        let vmId;
+        let signature;
+        let didDocument;
+        let grantService;
+
+        // Start with LookupDID call
+        fetch('/nancy-grpc-client-side/did/lookupdid?value=' + did, {   
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
         })
-        .then(response => response.json)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            console.log(data);//get signature
+            console.log('lookup_did', data);
+            
+            // Parse the DID document
+            vmId = JSON.parse(data.value).verificationMethod[0].id;
+            try {
+                didDocument = JSON.parse(data.value);
+                console.log('DID Document:', didDocument);
+                
+                // Extract the verification method ID if available
+                if (didDocument && didDocument.verificationMethod && didDocument.verificationMethod.length > 0) {
+                    vmId = didDocument.verificationMethod[0].id;
+                    console.log('Extracted vmId from DID document:', vmId);
+                }
+            } catch (error) {
+                console.error('Error parsing DID document:', error);
+            }
+            
+            // Now proceed with request_credential
+            return fetch('/nancy-grpc-client-side/request_credential', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "credParam": {
+                        "claims": claims,
+                        "holderDID": did,
+                        "signature": "",
+                        "vmId": vmId
+                    },
+                    "issuerAddress": "195.37.154.23:8881" // wallet deployed ip:port
+                })
+            });
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('request_credential', data);
+
+            vcId = JSON.parse(data.credential).id;
+            // Second fetch call - only executes if the first one succeeds
+            return fetch('/nancy-grpc-client-side/request_authorization', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "authParam": {
+                        "holderDID": did,
+                        "vcId": vcId
+                    },
+                    "verifierAddress": verifierAddress
+                })
+            });
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('request_authorization', data);
+            // Third fetch call - only executes if the second one succeeds
+            if(data.result){
+                return fetch('/nancy-grpc-client-side/sign_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "did": did,
+                    "payload": payload,
+                    "vmId": vmId
+                })
+            });
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('sign_message', data);
+            signature = data.signature;
+
+            // Fourth fetch call - only executes if the third one succeeds
+            return fetch('/use_case_request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "did": did,
+                    "payload": payload,
+                    "signature": signature,
+                    "vmId": vmId
+                })
+            });
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('use_case_request', data);
+            grantService = data;
         })
         .catch(error => {
-            console.error('Error signing message:', error);
+            console.error('Error in fetch chain:', error);
         });
-        
 
         const videoPlayer = document.getElementById('videoPlayer');
         const resolutionElement = document.getElementById('resolution');
