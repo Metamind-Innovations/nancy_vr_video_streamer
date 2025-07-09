@@ -1,4 +1,5 @@
 import json
+import requests
 from fastapi import APIRouter, HTTPException, Request, Query
 from helpers.models import CredentialRequest, AuthorizationRequest, SignMessageRequest, VerifyMessageRequest
 
@@ -87,9 +88,15 @@ async def redirect_to_verify(request: VerifyMessageRequest, req: Request):
     if verifiableMessage["result"] == True:
         #execute ote service provider endpoint for ListAuthorizationResults
         #get the authorization result and execute Desicion to grant service
-        #res = fetch(ote(ListAuthorizationResults))
-        res = True
-
-        return res
+        try:
+            ote_response = requests.post(
+                "http://10.10.10.40:8080/api/authorize",
+                headers={"Content-Type": "application/json"},
+                json={"did": request.did}
+            )
+            ote_response.raise_for_status()
+            return ote_response.json()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error calling OTE service: {str(e)}")
     else:
         return False

@@ -2,10 +2,13 @@ from pydantic import BaseModel
 from typing import Dict, Any
 
 class SearchRequest(BaseModel):
-    request: Dict[str, Any]
+    consumer_id: str
+    service_query: Dict[str, Any]
+    provider_query: Dict[str, Any]
 
 class SLASignRequest(BaseModel):
-    data: Dict[str, Any]
+    slaId: str
+    uid: str
 
 class CredentialParam(BaseModel):
     claims: str
@@ -35,3 +38,20 @@ class VerifyMessageRequest(BaseModel):
     payload: str
     signature: str
     vmId: str
+
+class CreateProviderRequest(BaseModel):
+    id: str
+    name: str
+    type: str
+    available_resources: int
+
+class CreateServiceRequest(BaseModel):
+    provider_id: str
+    cpu: int
+    ram: int
+    location: str
+    storage: int
+    maximumULthroughput: int
+    maximumDLthroughput: int
+    minPrice: float
+    maxPrice: float

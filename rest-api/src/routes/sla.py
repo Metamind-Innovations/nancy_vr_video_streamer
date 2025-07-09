@@ -7,7 +7,11 @@ router = APIRouter(prefix="/sla", tags=["SLA"])
 async def sla_sign(request: SLASignRequest, req: Request):
     try:
         grpc_client = req.app.state.grpc_client
-        result = grpc_client.sla_sign(request.data)
+        request_data = {
+            "slaId": request.slaId,
+            "uid": request.uid
+        }
+        result = grpc_client.sla_sign(request_data)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

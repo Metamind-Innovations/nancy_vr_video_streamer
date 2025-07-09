@@ -145,3 +145,21 @@ class DltGatewayClient:
             "result": response.result,
             "error": response.error
         }
+    
+    def create_provider(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a provider."""
+        request = dlt_gateway_pb2.Request(value=json.dumps(request_data))
+        response = self.stub.CreateProvider(request)
+        return {
+            "value": response.value,
+            "error": response.error
+        }
+    
+    def create_service(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a service."""
+        request = dlt_gateway_pb2.Request(value=json.dumps(request_data))
+        response = self.stub.CreateService(request)
+        return {
+            "value": response.value,
+            "error": response.error
+        }

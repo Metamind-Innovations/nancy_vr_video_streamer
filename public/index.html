@@ -226,9 +226,9 @@
     </div>
 
     <script>
-        const did = "did:nancy:wallet-external-test-3EtvHYvkEDF4JAWPpr9LvS";//do change with the local wallet did
-        const issuerAddress = "195.37.154.23:8881";//do change with the local wallet ip:port
-        const verifierAddress = "195.37.154.23:8881";//do change with the local wallet ip:port
+        const did = "did:nancy:greek-outdoor-application-8zmv2tr4Yj914UENSK5Vi";//do change with the local wallet did
+        const issuerAddress = "10.10.10.40:50001";//do change with the local wallet ip:port
+        const verifierAddress = "10.10.10.40:50000";//do change with the local wallet ip:port
         const claims = "{\"age\": 20}";//do change with the local wallet claims
         const payload = "vr video service";
 
@@ -370,7 +370,7 @@
         })
         .then(data => {
             console.log('use_case_request', data);
-            grantService = data;
+            grantService = data.result;
             
             // Hide loading indicator
             document.getElementById('loadingIndicator').style.display = 'none';
