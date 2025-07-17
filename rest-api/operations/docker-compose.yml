@@ -1,41 +1,41 @@
-version: '3'
+version: '3.8'
 
 services:
-  video-server:
-    image: test
-    container_name: video-server
-    ports:
-      - "8080:80"
-    volumes:
-      - ./videos:/usr/share/nginx/videos
-      - ./logs:/var/log/nginx
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-    restart: unless-stopped
-    depends_on:
-      - nancy-grpc-server-side
   nancy-grpc-client-side:
-    image: nancy-grpc
+    build:
+      context: ..
+      dockerfile: operations/Dockerfile
     container_name: nancy-grpc-client-side
     ports:
       - "8000:8000"
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
-      - GRPC_HOST=${GRPC_HOST:-10.10.10.40}
-      - GRPC_PORT=${GRPC_PORT:-50001}
+      - GRPC_HOST=${GRPC_HOST:-195.37.154.23}
+      - GRPC_PORT=${GRPC_PORT:-8881}
       - UVICORN_HOST=${UVICORN_HOST:-0.0.0.0}
       - UVICORN_PORT=${UVICORN_PORT:-8000}
       - API_TITLE=${API_TITLE:-DLT Gateway REST API client-side}
+    networks:
+      - nancy-network
   nancy-grpc-server-side:
-    image: nancy-grpc
+    build:
+      context: ..
+      dockerfile: operations/Dockerfile
     container_name: nancy-grpc-server-side
     ports:
       - "8001:8000"
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
-      - GRPC_HOST=${GRPC_HOST:-10.10.10.40}
-      - GRPC_PORT=${GRPC_PORT:-50000}
+      - GRPC_HOST=${GRPC_HOST:-195.37.154.23}
+      - GRPC_PORT=${GRPC_PORT:-8881}
       - UVICORN_HOST=${UVICORN_HOST:-0.0.0.0}
       - UVICORN_PORT=${UVICORN_PORT:-8000}
       - API_TITLE=${API_TITLE:-DLT Gateway REST API server-side}
+    networks:
+      - nancy-network
+
+networks:
+  nancy-network:
+    driver: bridge 
