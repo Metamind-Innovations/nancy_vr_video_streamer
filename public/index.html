@@ -143,6 +143,10 @@
             font-size: 9px;
             color: #666;
         }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -150,61 +154,279 @@
         <div class="nav">
             <h1>Video Streaming Server</h1>
         </div>
-        <div class="video-container">
-            <video id="videoPlayer" controls playsinline>
-                <source src="/videos/sample.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        </div>
-        <div>
-            <label for="videoSelect">Select Video:</label>
-            <select id="videoSelect" onchange="changeVideo()">
-                <option value="/videos/sample.mp4">Loading videos...</option>
-            </select>
+        
+        <!-- Loading indicator - Shown during authentication -->
+        <div id="loadingIndicator" style="text-align: center; padding: 20px; margin-bottom: 20px;">
+            <h2>Authenticating</h2>
+            <p>Please wait while we verify your credentials...</p>
+            <div class="spinner" style="margin: 20px auto; width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: #4CAF50; animation: spin 1s linear infinite;"></div>
         </div>
         
-        <div class="metrics">
-            <h3>Stream Analytics</h3>
-            <div id="streamInfo">
-                <p>Resolution: <span id="resolution">Loading...</span></p>
-                <p>Current Bitrate: <span id="bitrate">Calculating...</span></p>
-                <p>Buffered: <span id="buffered">0%</span></p>
+        <!-- Access Denied Message - Hidden by default -->
+        <div id="accessDeniedMessage" style="display: none; text-align: center; padding: 20px; background-color: #ffebee; border-radius: 5px; margin-bottom: 20px;">
+            <h2>Access Denied</h2>
+            <p>You do not have permission to view this content. Please verify your credentials.</p>
+        </div>
+        
+        <!-- Video Container - Will be shown/hidden based on authorization -->
+        <div id="videoContainer" style="display: none;">
+            <div class="video-container">
+                <video id="videoPlayer" controls playsinline>
+                    <source src="/videos/sample.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div>
+                <label for="videoSelect">Select Video:</label>
+                <select id="videoSelect" onchange="changeVideo()">
+                    <option value="/videos/sample.mp4">Loading videos...</option>
+                </select>
             </div>
             
-            <div class="metrics-grid">
-                <div class="graph-container" id="bitrateGraph">
-                    <div class="graph-title">Bitrate History (kbps)</div>
-                    <div class="graph-y-axis" id="bitrateAxis"></div>
-                    <div class="label">Real-time (last 60 points)</div>
+            <div class="metrics">
+                <h3>Stream Analytics</h3>
+                <div id="streamInfo">
+                    <p>Resolution: <span id="resolution">Loading...</span></p>
+                    <p>Current Bitrate: <span id="bitrate">Calculating...</span></p>
+                    <p>Buffered: <span id="buffered">0%</span></p>
                 </div>
-                <div class="graph-container" id="bufferGraph">
-                    <div class="graph-title">Buffer Level (%)</div>
-                    <div class="graph-y-axis" id="bufferAxis"></div>
-                    <div class="label">Real-time (last 60 points)</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">Video Duration</div>
-                    <div class="stat-value" id="videoDuration">0:00</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">Buffer Events</div>
-                    <div class="stat-value" id="bufferEvents">0</div>
-                </div>
-                <div class="graph-container fps-graph" id="fpsGraph">
-                    <div class="graph-title">Frame Rate (estimated fps)</div>
-                    <div class="graph-y-axis" id="fpsAxis"></div>
-                    <div class="label">Real-time monitoring</div>
-                </div>
-                <div class="graph-container latency-graph" id="latencyGraph">
-                    <div class="graph-title">Playback Latency</div>
-                    <div class="latency-value" id="latencyValue">Calculating...</div>
-                    <div class="label">Time to first frame (ms)</div>
+                
+                <div class="metrics-grid">
+                    <div class="graph-container" id="bitrateGraph">
+                        <div class="graph-title">Bitrate History (kbps)</div>
+                        <div class="graph-y-axis" id="bitrateAxis"></div>
+                        <div class="label">Real-time (last 60 points)</div>
+                    </div>
+                    <div class="graph-container" id="bufferGraph">
+                        <div class="graph-title">Buffer Level (%)</div>
+                        <div class="graph-y-axis" id="bufferAxis"></div>
+                        <div class="label">Real-time (last 60 points)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Video Duration</div>
+                        <div class="stat-value" id="videoDuration">0:00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Buffer Events</div>
+                        <div class="stat-value" id="bufferEvents">0</div>
+                    </div>
+                    <div class="graph-container fps-graph" id="fpsGraph">
+                        <div class="graph-title">Frame Rate (estimated fps)</div>
+                        <div class="graph-y-axis" id="fpsAxis"></div>
+                        <div class="label">Real-time monitoring</div>
+                    </div>
+                    <div class="graph-container latency-graph" id="latencyGraph">
+                        <div class="graph-title">Playback Latency</div>
+                        <div class="latency-value" id="latencyValue">Calculating...</div>
+                        <div class="label">Time to first frame (ms)</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        const did = "did:nancy:greek-outdoor-application-8zmv2tr4Yj914UENSK5Vi";//do change with the local wallet did
+        const issuerAddress = "10.10.10.40:50001";//do change with the local wallet ip:port
+        const verifierAddress = "10.10.10.40:50000";//do change with the local wallet ip:port
+        let claims = "{\"age\": 20}";//do change with the local wallet claims - will be updated with IMSI
+        const payload = "vr video service";
+
+        // const vcId = "did:nancy:vc-d2ad76f6-12b8-4dbe-bc27-ff2b0da80b47";
+        // const vmId = "did:nancy:wallet-external-test-3EtvHYvkEDF4JAWPpr9LvS#key-1";
+        // const signature = "MEUCICrnM487bdwV84dFAOfis+O8RAX/ZQ6VikQvjsdUlwfiAiEAzYFV7IBbxJtjqKzADAL8zzULYPnDJ0ii1iHe8h/yTMc=";
+
+        let vcId;
+        let vmId;
+        let signature;
+        let didDocument;
+        let grantService;
+
+        // Start with IMSI lookup, then proceed with authentication flow
+        fetch('/api/imsi/lookup', {  // Use local proxy endpoint instead of direct call
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`IMSI lookup failed! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('IMSI lookup response:', data);
+            
+            // Check if IMSI lookup was successful
+            if (data.success && data.imsi) {
+                // Parse existing claims and add IMSI
+                const existingClaims = JSON.parse(claims);
+                existingClaims.imsi = data.imsi;
+                claims = JSON.stringify(existingClaims);
+                console.log('Updated claims with IMSI:', claims);
+            } else {
+                console.warn('IMSI lookup was not successful or IMSI not found:', data);
+                // Continue with original claims if IMSI lookup fails
+            }
+            
+            // Now proceed with LookupDID call
+            return fetch('/nancy-grpc-client-side/did/lookupdid?value=' + did, {   
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            });
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('lookup_did', data);
+            
+            // Parse the DID document
+            vmId = JSON.parse(data.value).verificationMethod[0].id;
+            try {
+                didDocument = JSON.parse(data.value);
+                console.log('DID Document:', didDocument);
+                
+                // Extract the verification method ID if available
+                if (didDocument && didDocument.verificationMethod && didDocument.verificationMethod.length > 0) {
+                    vmId = didDocument.verificationMethod[0].id;
+                    console.log('Extracted vmId from DID document:', vmId);
+                }
+            } catch (error) {
+                console.error('Error parsing DID document:', error);
+            }
+            
+            // Now proceed with request_credential
+            return fetch('/nancy-grpc-client-side/request_credential', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "credParam": {
+                        "claims": claims,
+                        "holderDID": did,
+                        "signature": "",
+                        "vmId": vmId
+                    },
+                    "issuerAddress": issuerAddress // wallet deployed ip:port
+                })
+            });
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('request_credential', data);
+
+            vcId = JSON.parse(data.credential).id;
+            // Second fetch call - only executes if the first one succeeds
+            return fetch('/nancy-grpc-client-side/request_authorization', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "authParam": {
+                        "holderDID": did,
+                        "vcId": vcId
+                    },
+                    "verifierAddress": verifierAddress
+                })
+            });
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('request_authorization', data);
+            // Third fetch call - only executes if the second one succeeds
+            if(data.result){
+                return fetch('/nancy-grpc-client-side/sign_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "did": did,
+                    "payload": payload,
+                    "vmId": vmId
+                })
+            });
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('sign_message', data);
+            signature = data.signature;
+
+            // Fourth fetch call - only executes if the third one succeeds
+            return fetch('/use_case_request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "did": did,
+                    "payload": payload,
+                    "signature": signature,
+                    "vmId": vmId
+                })
+            });
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('use_case_request', data);
+            grantService = data.result;
+            
+            // Hide loading indicator
+            document.getElementById('loadingIndicator').style.display = 'none';
+            
+            // Check if access is granted
+            if (grantService === true) {
+                // Show video player and hide access denied message
+                document.getElementById('videoContainer').style.display = 'block';
+                document.getElementById('accessDeniedMessage').style.display = 'none';
+                console.log('Access granted - Video player enabled');
+            } else {
+                // Hide video player and show access denied message
+                document.getElementById('videoContainer').style.display = 'none';
+                document.getElementById('accessDeniedMessage').style.display = 'block';
+                console.log('Access denied - Video player disabled');
+            }
+        })
+        .catch(error => {
+            console.error('Error in fetch chain:', error);
+            // Hide loading indicator
+            document.getElementById('loadingIndicator').style.display = 'none';
+            // Show error message in case of any fetch failure
+            document.getElementById('videoContainer').style.display = 'none';
+            document.getElementById('accessDeniedMessage').style.display = 'block';
+            document.getElementById('accessDeniedMessage').innerHTML = '<h2>Error</h2><p>Failed to verify credentials: ' + error.message + '</p>';
+        });
+
         const videoPlayer = document.getElementById('videoPlayer');
         const resolutionElement = document.getElementById('resolution');
         const bitrateElement = document.getElementById('bitrate');
