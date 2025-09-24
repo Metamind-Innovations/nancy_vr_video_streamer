@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  nancy-grpc-client-side:
+    build:
+      context: ..
+      dockerfile: operations/Dockerfile
+    container_name: nancy-grpc-client-side
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GRPC_HOST=${GRPC_HOST:-195.37.154.23}
+      - GRPC_PORT=${GRPC_PORT:-8881}
+      - UVICORN_HOST=${UVICORN_HOST:-0.0.0.0}
+      - UVICORN_PORT=${UVICORN_PORT:-8000}
+      - API_TITLE=${API_TITLE:-DLT Gateway REST API client-side}
+    networks:
+      - nancy-network
+  nancy-grpc-server-side:
+    build:
+      context: ..
+      dockerfile: operations/Dockerfile
+    container_name: nancy-grpc-server-side
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GRPC_HOST=${GRPC_HOST:-195.37.154.23}
+      - GRPC_PORT=${GRPC_PORT:-8881}
+      - UVICORN_HOST=${UVICORN_HOST:-0.0.0.0}
+      - UVICORN_PORT=${UVICORN_PORT:-8000}
+      - API_TITLE=${API_TITLE:-DLT Gateway REST API server-side}
+    networks:
+      - nancy-network
+
+networks:
+  nancy-network:
+    driver: bridge 
