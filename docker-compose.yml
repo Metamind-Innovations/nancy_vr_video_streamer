@@ -2,7 +2,7 @@ version: '3'
 
 services:
   video-server:
-    image: ghcr.io/nntamp/nancy-video-server:latest
+    build: .
     container_name: video-server
     ports:
       - "8080:80"
@@ -10,6 +10,8 @@ services:
       - ./videos:/usr/share/nginx/videos
       - ./logs:/var/log/nginx
     environment:
-      # video storage URL should be placed HERE
-      - VIDEO_SOURCE_URL=${VIDEO_SOURCE_URL}
+
+      # Multiple videos (comma-separated)
+      - VIDEO_SOURCE_URL=https://drive.google.com/file/d/1SLjNNWPgGoCbjtxyelZl4QZIGtXoTAf0/view?usp=sharing,https://drive.google.com/file/d/1dNkhvsnTSdVmVCgvaa8_YEY8LIMxxB0D/view?usp=sharing
+
     restart: unless-stopped

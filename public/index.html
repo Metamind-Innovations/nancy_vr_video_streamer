@@ -152,17 +152,17 @@
         </div>
         <div class="video-container">
             <video id="videoPlayer" controls playsinline>
-                <source src="/videos/sample.mp4" type="video/mp4">
+                <source id="videoSource" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
         </div>
         <div>
             <label for="videoSelect">Select Video:</label>
             <select id="videoSelect" onchange="changeVideo()">
-                <option value="/videos/sample.mp4">Loading videos...</option>
+                <option value="">Loading videos...</option>
             </select>
         </div>
-        
+
         <div class="metrics">
             <h3>Stream Analytics</h3>
             <div id="streamInfo">
@@ -170,7 +170,7 @@
                 <p>Current Bitrate: <span id="bitrate">Calculating...</span></p>
                 <p>Buffered: <span id="buffered">0%</span></p>
             </div>
-            
+
             <div class="metrics-grid">
                 <div class="graph-container" id="bitrateGraph">
                     <div class="graph-title">Bitrate History (kbps)</div>
@@ -206,6 +206,7 @@
 
     <script>
         const videoPlayer = document.getElementById('videoPlayer');
+        const videoSource = document.getElementById('videoSource');
         const resolutionElement = document.getElementById('resolution');
         const bitrateElement = document.getElementById('bitrate');
         const bufferedElement = document.getElementById('buffered');
@@ -219,7 +220,7 @@
         const bitrateAxis = document.getElementById('bitrateAxis');
         const bufferAxis = document.getElementById('bufferAxis');
         const fpsAxis = document.getElementById('fpsAxis');
-        
+
         let startTime = Date.now();
         let loadedBytes = 0;
         let lastLoadedBytes = 0;
@@ -232,19 +233,19 @@
         let lastFrameTime = 0;
         let fpsValues = Array(60).fill(0);
         let latencyValue = 0;
-        
+
         let bitrateHistory = Array(60).fill(0);
         let bufferHistory = Array(60).fill(0);
-        
+
         function formatTime(seconds) {
             const minutes = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
             return `${minutes}:${secs < 10 ? '0' + secs : secs}`;
         }
-        
+
         function createYAxis(element, maxValue, unit, steps = 5) {
             element.innerHTML = '';
-            
+
             for (let i = 0; i <= steps; i++) {
                 const value = Math.round(maxValue * (i / steps));
                 const tick = document.createElement('div');
@@ -254,21 +255,20 @@
                 element.appendChild(tick);
             }
         }
-        
+
         function updateBitrateGraph() {
             bitrateGraph.querySelectorAll('.data-point, .data-value').forEach(el => el.remove());
-            
+
             let maxBitrate = Math.max(...bitrateHistory, 1);
             createYAxis(bitrateAxis, maxBitrate, '', 4);
-            
+
             bitrateHistory.forEach((value, index) => {
                 const point = document.createElement('div');
                 point.className = 'data-point';
                 const height = (value / maxBitrate) * 100;
                 point.style.height = `${height}px`;
                 point.style.left = `${(index / 60) * 100}%`;
-                
-                
+
                 if (index % 10 === 0 && value > 0) {
                     const valueLabel = document.createElement('div');
                     valueLabel.className = 'data-value';
@@ -277,22 +277,22 @@
                     valueLabel.style.bottom = `${height + 2}px`;
                     bitrateGraph.appendChild(valueLabel);
                 }
-                
+
                 bitrateGraph.appendChild(point);
             });
         }
-        
+
         function updateBufferGraph() {
             bufferGraph.querySelectorAll('.data-point, .data-value').forEach(el => el.remove());
-            
+
             createYAxis(bufferAxis, 100, '%', 4);
-            
+
             bufferHistory.forEach((value, index) => {
                 const point = document.createElement('div');
                 point.className = 'data-point';
                 point.style.height = `${value}px`;
                 point.style.left = `${(index / 60) * 100}%`;
-                
+
                 if (index % 10 === 0 && value > 0) {
                     const valueLabel = document.createElement('div');
                     valueLabel.className = 'data-value';
@@ -301,24 +301,24 @@
                     valueLabel.style.bottom = `${value + 2}px`;
                     bufferGraph.appendChild(valueLabel);
                 }
-                
+
                 bufferGraph.appendChild(point);
             });
         }
-        
+
         function updateFpsGraph() {
             fpsGraph.querySelectorAll('.data-point, .data-value').forEach(el => el.remove());
-            
+
             let maxFps = Math.max(...fpsValues, 30);
             createYAxis(fpsAxis, maxFps, '', 4);
-            
+
             fpsValues.forEach((value, index) => {
                 const point = document.createElement('div');
                 point.className = 'data-point fps-point';
                 const height = (value / maxFps) * 100;
                 point.style.height = `${height}px`;
                 point.style.left = `${(index / 60) * 100}%`;
-                
+
                 if (index % 10 === 0 && value > 0) {
                     const valueLabel = document.createElement('div');
                     valueLabel.className = 'data-value';
@@ -327,16 +327,15 @@
                     valueLabel.style.bottom = `${height + 2}px`;
                     fpsGraph.appendChild(valueLabel);
                 }
-                
+
                 fpsGraph.appendChild(point);
             });
         }
-        
+
         function updateLatencyGraph() {
             latencyGraph.querySelectorAll('.data-point').forEach(el => el.remove());
-            
+
             if (latencyValue > 0) {
-                
                 const point = document.createElement('div');
                 point.className = 'data-point latency-point';
                 const height = Math.min(latencyValue / 10, 100);
@@ -347,32 +346,32 @@
                 latencyValueElement.textContent = `${latencyValue}ms`;
             }
         }
-        
+
         function calculateFps() {
             const now = performance.now();
             const elapsed = now - lastFrameTime;
-            
+
             if (lastFrameTime > 0 && elapsed < 1000) {
                 const currentFps = Math.round(1000 / elapsed);
                 fpsValues.shift();
                 fpsValues.push(currentFps);
                 updateFpsGraph();
             }
-            
+
             lastFrameTime = now;
             frameCount++;
-            
+
             if (isPlaying && videoPlayer.readyState > 2) {
                 requestAnimationFrame(calculateFps);
             }
         }
-        
+
         videoPlayer.addEventListener('loadstart', function() {
             loadStartTime = performance.now();
             firstFrameTime = 0;
             latencyValueElement.textContent = 'Calculating...';
         });
-        
+
         videoPlayer.addEventListener('loadeddata', function() {
             if (firstFrameTime === 0) {
                 firstFrameTime = performance.now();
@@ -381,25 +380,25 @@
                 updateLatencyGraph();
             }
         });
-        
+
         videoPlayer.addEventListener('loadedmetadata', function() {
             resolutionElement.textContent = `${this.videoWidth}x${this.videoHeight}`;
             videoDurationElement.textContent = formatTime(this.duration);
         });
-        
+
         videoPlayer.addEventListener('progress', function() {
             if (this.buffered.length > 0) {
                 const bufferedEnd = this.buffered.end(this.buffered.length - 1);
                 const duration = this.duration;
                 const bufferedPercent = Math.floor((bufferedEnd / duration) * 100);
                 bufferedElement.textContent = `${bufferedPercent}%`;
-                
+
                 bufferHistory.shift();
                 bufferHistory.push(bufferedPercent);
                 updateBufferGraph();
             }
         });
-        
+
         videoPlayer.addEventListener('playing', function() {
             isPlaying = true;
             if (!lastPlayingState) {
@@ -410,12 +409,12 @@
                 requestAnimationFrame(calculateFps);
             }
         });
-        
+
         videoPlayer.addEventListener('pause', function() {
             isPlaying = false;
             lastPlayingState = false;
         });
-        
+
         videoPlayer.addEventListener('waiting', function() {
             if (lastPlayingState) {
                 bufferEvents++;
@@ -423,28 +422,29 @@
                 lastPlayingState = false;
             }
         });
+
         setInterval(function() {
             if (videoPlayer.readyState > 0) {
                 const videoDuration = videoPlayer.duration;
-                const videoBytes = videoPlayer.buffered.length > 0 ? 
+                const videoBytes = videoPlayer.buffered.length > 0 ?
                     (videoPlayer.buffered.end(0) / videoDuration) * (1024 * 1024) : 0;
                 const elapsedSeconds = (Date.now() - startTime) / 1000;
-                
+
                 if (elapsedSeconds > 0 && videoBytes > lastLoadedBytes) {
                     const bitsPerSecond = ((videoBytes - lastLoadedBytes) * 8) / elapsedSeconds;
                     const kbps = Math.round(bitsPerSecond);
                     bitrateElement.textContent = `${kbps} kbps`;
-                    
+
                     bitrateHistory.shift();
                     bitrateHistory.push(kbps);
                     updateBitrateGraph();
-                    
+
                     lastLoadedBytes = videoBytes;
                     startTime = Date.now();
                 }
             }
         }, 100);
-        
+
         videoPlayer.addEventListener('play', function() {
             const sessionData = {
                 videoId: videoPlayer.currentSrc.split('/').pop(),
@@ -453,21 +453,21 @@
                 screenSize: `${window.innerWidth}x${window.innerHeight}`
             };
             sessionStorage.setItem('videoSession', JSON.stringify(sessionData));
-            
+
             logStreamEvent('play');
         });
-        
+
         videoPlayer.addEventListener('ended', function() {
             logStreamEvent('complete');
         });
-        
+
         videoPlayer.addEventListener('pause', function() {
             logStreamEvent('pause');
         });
-        
+
         function logStreamEvent(eventType) {
             console.log(`Stream event: ${eventType}`);
-            
+
             const events = JSON.parse(localStorage.getItem('streamEvents') || '[]');
             events.push({
                 type: eventType,
@@ -476,7 +476,7 @@
                 position: videoPlayer.currentTime
             });
             localStorage.setItem('streamEvents', JSON.stringify(events));
-            
+
             if (window.MetricsTracker) {
                 window.MetricsTracker.recordStreamEvent(
                     videoPlayer.currentSrc.split('/').pop(),
@@ -487,81 +487,63 @@
                 );
             }
         }
-        function listVideoFilesDirectly() {
-            fetch('/videos/')
+
+        function fetchVideos() {
+            fetch('/videos/', {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Network response was not ok');
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     return response.text();
                 })
                 .then(html => {
-                    const links = [];
-                    const regex = /<a href="([^"]+\.mp4)"[^>]*>(.*?)<\/a>/gi;
-                    let match;
-                    
-                    while ((match = regex.exec(html)) !== null) {
-                        links.push({
-                            href: match[1],
-                            text: match[2]
-                        });
-                    }
-                    
-                    const select = document.getElementById('videoSelect');
-                    select.innerHTML = '';
-                    
-                    if (links.length > 0) {
-                        links.forEach(link => {
-                            const option = document.createElement('option');
-                            option.value = `/videos/${link.href}`;
-                            option.textContent = decodeURIComponent(link.href);
-                            select.appendChild(option);
-                        });
-                    } else {
-                        const option = document.createElement('option');
-                        option.value = '/videos/sample.mp4';
-                        option.textContent = 'sample.mp4';
-                        select.appendChild(option);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error listing videos:', error);
-                    fetchVideosFromApi();
-                });
-        }
-
-        function fetchVideos() {
-            
-            fetch('/videos/')
-                .then(response => response.text())
-                .then(html => {
-                    const regex = /<a href="([^"]+\.mp4)"[^>]*>(.*?)<\/a>/gi;
+                    const regex = /<a href="([^"]+\.mp4)"[^>]*>/gi;
                     const videoFiles = [];
                     let match;
-                    
+
                     while ((match = regex.exec(html)) !== null) {
-                        videoFiles.push({
-                            filename: match[1],
-                            title: match[1] 
-                        });
+                        videoFiles.push(decodeURIComponent(match[1]));
                     }
-                    
-                    
+
                     const select = document.getElementById('videoSelect');
                     select.innerHTML = '';
-                    
+
                     if (videoFiles.length > 0) {
-                        videoFiles.forEach(video => {
+                        videoFiles.forEach(filename => {
                             const option = document.createElement('option');
-                            option.value = `/videos/${video.filename}`;
-                            option.textContent = decodeURIComponent(video.filename);
+                            option.value = `/videos/${filename}`;
+                            option.textContent = filename;
                             select.appendChild(option);
                         });
+
+                        const firstVideoUrl = select.value;
+                        console.log('Loading video:', firstVideoUrl);
+
+                        videoSource.src = firstVideoUrl;
+                        videoPlayer.load();
+
+                        videoPlayer.addEventListener('error', function(e) {
+                            console.error('Video load error:', e);
+                            console.error('Video error code:', videoPlayer.error);
+                            if (videoPlayer.error) {
+                                console.error('Error details:', videoPlayer.error.message, videoPlayer.error.code);
+                            }
+                        }, { once: true });
+
+                        videoPlayer.addEventListener('loadedmetadata', function() {
+                            console.log('Video loaded successfully:', firstVideoUrl);
+                        }, { once: true });
+
                     } else {
-                        
                         const option = document.createElement('option');
-                        option.value = '/videos/sample.mp4';
-                        option.textContent = 'sample.mp4';
+                        option.value = '';
+                        option.textContent = 'No videos found - add MP4 files to the videos directory';
                         select.appendChild(option);
                     }
             })
@@ -570,20 +552,30 @@
                 const select = document.getElementById('videoSelect');
                 select.innerHTML = '';
                 const option = document.createElement('option');
-                option.value = '/videos/sample.mp4';
-                option.textContent = 'sample.mp4';
+                option.value = '';
+                option.textContent = 'Error loading videos - check console';
                 select.appendChild(option);
             });
         }
 
         function changeVideo() {
             const select = document.getElementById('videoSelect');
-            const video = document.getElementById('videoPlayer');
-            
-            video.src = select.value;
-            video.load();
-            video.play();
-            
+
+            if (!select.value) {
+                console.warn('No video selected');
+                return;
+            }
+
+            console.log('Changing video to:', select.value);
+
+            videoPlayer.pause();
+            videoSource.src = select.value + '?t=' + Date.now();
+            videoPlayer.load();
+
+            videoPlayer.addEventListener('canplay', function() {
+                videoPlayer.play().catch(e => console.error('Play error:', e));
+            }, { once: true });
+
             startTime = Date.now();
             loadedBytes = 0;
             lastLoadedBytes = 0;
@@ -597,22 +589,22 @@
             firstFrameTime = 0;
             frameCount = 0;
             lastFrameTime = 0;
-            
+
             resolutionElement.textContent = 'Loading...';
             bitrateElement.textContent = 'Calculating...';
             bufferedElement.textContent = '0%';
             bufferEventsElement.textContent = '0';
             videoDurationElement.textContent = '0:00';
             latencyValueElement.textContent = 'Calculating...';
-            
+
             updateBitrateGraph();
             updateBufferGraph();
             updateFpsGraph();
             latencyGraph.querySelectorAll('.data-point').forEach(el => el.remove());
         }
-        
+
         window.addEventListener('DOMContentLoaded', (event) => {
-            listVideoFilesDirectly();
+            fetchVideos();
             createYAxis(bitrateAxis, 100, '', 4);
             createYAxis(bufferAxis, 100, '%', 4);
             createYAxis(fpsAxis, 30, '', 4);
