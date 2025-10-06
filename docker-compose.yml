@@ -1,8 +1,6 @@
-version: '3'
-
 services:
   video-server:
-    build: .
+    image: gigakos/nancy-video-server:latest
     container_name: video-server
     ports:
       - "8080:80"

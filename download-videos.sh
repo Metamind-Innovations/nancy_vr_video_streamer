@@ -1,5 +1,3 @@
-#!/bin/sh
-
 download_from_google_drive() {
     url="$1"
     output_name="$2"
